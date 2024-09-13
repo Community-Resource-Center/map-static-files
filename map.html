@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 600px; /* Adjust the height as needed */
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Create the map and set its view centered around Davidson County with a broader zoom level
+    var map = L.map('map').setView([36.1627, -86.7816], 9); // Centered on Davidson County with a zoom level of 9
+
+    // Add a base layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Add county boundaries
+    fetch('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: function (feature) {
+            return { color: '#ff7800', weight: 2 };
+          }
+        }).addTo(map);
+      })
+      .catch(error => console.error('Error loading county boundaries:', error));
+
+    // Add zip codes
+    fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/tn_tennessee_zip_codes_geo.min.json')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: function (feature) {
+            return { color: '#0000ff', weight: 2 };
+          }
+        }).addTo(map);
+      })
+      .catch(error => console.error('Error loading zip codes:', error));
+  </script>
+</body>
+</html>

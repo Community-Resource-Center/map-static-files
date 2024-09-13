@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 600px; /* Adjust the height as needed */
+    }
+    .toggle-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 5px;
+      cursor: pointer;
+      z-index: 1000; /* Ensure button is above map layers */
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="toggle-button" onclick="toggleZipCodes()">Toggle Zip Codes</div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <script>
+    // Initialize the map
+    var map = L.map('map').setView([36.1627, -86.7816], 9);
+
+    // Add a base layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    var csvData = {};
+    var zipCodeLayer = null;
+
+    // Load CSV data
+    Papa.parse('https://raw.githubusercontent.com/marieljum/static-files/main/h4tc/county_info.csv', {
+      download: true,
+      header: true,
+      complete: function(results) {
+        results.data.forEach(row => {
+          if (row.County) { // Ensure the 'County' field exists
+            csvData[row.County] = row; // Use 'County' as the key
+          }
+        });
+      },
+      error: function(error) {
+        console.error('Error loading CSV:', error);
+      }
+    });
+
+    // Add county boundaries
+    fetch('https://gist.githubusercontent.com/sdwfrost/d1c73f91dd9d175998ed166eb216994a/raw/e89c35f308cee7e2e5a784e1d3afc5d449e9e4bb/counties.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: function (feature) {
+            return { color: '#ff7800', weight: 2 };
+          },
+          onEachFeature: function (feature, layer) {
+            var countyName = feature.properties.name; // Adjust to match your GeoJSON property name
+
+            layer.on({
+              click: function(e) {
+                var info = csvData[countyName] || { info: 'No data available' };
+                var popupContent = `<h3>${countyName}</h3><p>${info.info || 'No additional information'}</p>`;
+                layer.bindPopup(popupContent).openPopup();
+              }
+            });
+          }
+        }).addTo(map);
+      })
+      .catch(error => console.error('Error loading county boundaries:', error));
+
+    // Function to toggle zip code layer
+    function toggleZipCodes() {
+      if (zipCodeLayer) {
+        if (map.hasLayer(zipCodeLayer)) {
+          map.removeLayer(zipCodeLayer);
+        } else {
+          map.addLayer(zipCodeLayer);
+        }
+      }
+    }
+
+    // Add zip code boundaries
+    fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/tn_tennessee_zip_codes_geo.min.json')
+      .then(response => response.json())
+      .then(data => {
+        zipCodeLayer = L.geoJSON(data, {
+          style: function (feature) {
+            return { color: '#0000ff', weight: 2 };
+          }
+        });
+        // Initially add the zip code layer, but you can control it via the toggle button
+        // map.addLayer(zipCodeLayer);
+      })
+      .catch(error => console.error('Error loading zip codes:', error));
+  </script>
+</body>
+</html>
